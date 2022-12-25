@@ -1,0 +1,19 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - 3000:3000
+    environment:
+      - MY_ENV=value
+    deploy:
+      mode: replicated
+      replicas: 1
+    networks:
+      - my_network
+    restart: always
+
+networks:
+  my_network:
+    driver: bridge
