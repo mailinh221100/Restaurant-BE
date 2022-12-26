@@ -215,6 +215,7 @@ async function rejectOrder(req, res, next) {
 
 async function cancelOrder(req, res, next) {
   try {
+    const {fullName} = req.user;
     const order = await Order.findById(req.params.orderId);
     if (!order) {
       return next(createError(404));
@@ -224,6 +225,22 @@ async function cancelOrder(req, res, next) {
     }
     order.status = 'Cancelled';
     await order.save();
+
+    const message = {
+      type: 'Canceled order',
+      message: `A order has been canceled by ${fullName}!`
+    };
+
+    socketUtil.get().emit('cancel', message);
+
+    const admins = await User.find({roles: ['admin']});
+    for (const admin of admins) {
+      await Notification.create({
+        ...message,
+        receiver: admin._id,
+      });
+    }
+
     return res.status(200).json({message: 'Order status has been updated.'});
   } catch (error) {
     next(error);

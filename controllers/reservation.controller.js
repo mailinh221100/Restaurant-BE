@@ -200,6 +200,7 @@ async function rejectReservation(req, res, next) {
 
 async function cancelReservation(req, res, next) {
     try {
+        const {fullName} = req.user;
         const reservation = await Reservation.findById(req.params.reservationId);
         if (!reservation) {
             return next(createError(404));
@@ -209,6 +210,22 @@ async function cancelReservation(req, res, next) {
         }
         reservation.status = 'Cancelled';
         await reservation.save();
+
+        const message = {
+            type: 'Canceled reservation',
+            message: `A reservation has been canceled by ${fullName}!`
+        };
+
+        socketUtil.get().emit('cancel', message);
+
+        const admins = await User.find({roles: ['admin']});
+        for (const admin of admins) {
+            await Notification.create({
+                ...message,
+                receiver: admin._id,
+            });
+        }
+
         return res.status(200).json({message: 'Reservation status has been updated.'});
     } catch (error) {
         next(error);
